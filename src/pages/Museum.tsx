@@ -14,7 +14,7 @@ export const Museum: React.FC = () => {
     const [selectedFrameId, setSelectedFrameId] = useState<string | null>(null);
 
     // Data Hooks
-    const { frames, saveFrame } = useMuseumData(id);
+    const { frames, saveFrame, error } = useMuseumData(id);
 
     // Multiplayer Logic
     const [playerId] = useState(() => uuidv4());
@@ -66,6 +66,25 @@ export const Museum: React.FC = () => {
                     )}
                 </div>
             </div>
+
+            {/* Error Message */}
+            {error && (
+                <div className="absolute top-20 left-1/2 transform -translate-x-1/2 z-50 pointer-events-auto w-full max-w-lg">
+                    <div className="bg-red-500/80 backdrop-blur-md text-white p-4 rounded-lg shadow-lg border border-red-400">
+                        <h3 className="font-bold flex items-center gap-2">
+                            <span>⚠️</span> データの読み込みに失敗しました
+                        </h3>
+                        <p className="text-sm mt-1">{error.message}</p>
+                        {error.message.includes("Missing or insufficient permissions") && (
+                            <div className="mt-2 text-xs bg-black/20 p-2 rounded">
+                                <strong>管理者の方へ:</strong><br />
+                                Firestoreのセキュリティルールが設定されていない可能性があります。<br />
+                                <code>FIREBASE_RULES_UPDATE.md</code> を確認して、全ユーザーへの読み取り権限を許可してください。
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
 
             <MuseumScene
                 isEditMode={isEditMode}

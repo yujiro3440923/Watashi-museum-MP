@@ -21,10 +21,14 @@ export interface FrameData {
 export const useMuseumData = (museumId: string | undefined) => {
     const [frames, setFrames] = useState<Record<string, FrameData>>({});
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<Error | null>(null);
 
     // Load frames from properties collection
     useEffect(() => {
         if (!museumId) return;
+        setLoading(true);
+        setError(null);
+
         if (db.app.options.apiKey === "API_KEY") {
             setLoading(false);
             return;
@@ -41,16 +45,19 @@ export const useMuseumData = (museumId: string | undefined) => {
                 snapshot.forEach((doc) => {
                     newFrames[doc.id] = doc.data() as FrameData;
                 });
+                console.log("Firestore data fetched:", newFrames); // Debug log
                 setFrames(newFrames);
                 setLoading(false);
             }, (err) => {
                 console.error("Error fetching frames:", err);
+                setError(err);
                 setLoading(false);
             });
 
             return () => unsubscribe();
         } catch (e) {
             console.error("Error setting up museum listener:", e);
+            setError(e instanceof Error ? e : new Error("Unknown error"));
             setLoading(false);
         }
     }, [museumId]);
@@ -110,5 +117,5 @@ export const useMuseumData = (museumId: string | undefined) => {
         }
     };
 
-    return { frames, saveFrame, loading };
+    return { frames, saveFrame, loading, error };
 };
