@@ -38,10 +38,11 @@ export const useRemotePlayers = (museumId: string | undefined, playerId: string)
 
                 snapshot.forEach((doc) => {
                     const data = doc.data() as PlayerData;
-                    // Filter out self and potentially stale users (logic omitted for simplicity)
+                    // Filter out self explicitly
                     if (doc.id !== playerId) {
                         const lastSeen = data.lastSeen?.toMillis?.() || 0;
-                        if (Date.now() - lastSeen < 60000) { // 60 seconds timeout
+                        // Shorten timeout to 10 seconds to remove ghosts quickly
+                        if (Date.now() - lastSeen < 10000) {
                             activePlayers.push({ ...data, id: doc.id });
                         }
                     }

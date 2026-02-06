@@ -5,12 +5,29 @@ import { MuseumScene } from '../components/Scene/MuseumScene';
 import { ImageEditor } from '../components/UI/ImageEditor';
 import { useRemotePlayers } from '../hooks/useMultiplayer';
 import { useMuseumData } from '../hooks/useMuseumData';
+import { useAuth } from '../hooks/useAuth';
 
 export const Museum: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const { hash } = useLocation();
-    const isEditMode = hash === '#edit';
+
+    // Auth & Owner check
+    const { user } = useAuth();
+    const isOwner = user?.uid === id;
+
+    // Edit mode is active if URL hash is #edit OR if user is the owner
+    const [isEditModeState, setIsEditModeState] = useState(hash === '#edit');
+
+    // Auto-enable edit mode for owner
+    useEffect(() => {
+        if (isOwner) {
+            setIsEditModeState(true);
+        }
+    }, [isOwner]);
+
+    const isEditMode = isEditModeState;
+
     const [selectedFrameId, setSelectedFrameId] = useState<string | null>(null);
 
     // Data Hooks
@@ -59,9 +76,18 @@ export const Museum: React.FC = () => {
                     >
                         ホームに戻る
                     </button>
-                    {isEditMode && (
-                        <div className="px-3 py-1 bg-yellow-500/10 border border-yellow-500/30 rounded text-yellow-500 text-xs tracking-widest backdrop-blur-md">
-                            編集中
+                    {isOwner ? (
+                        <div className="px-3 py-1 bg-yellow-500/20 border border-yellow-500/50 rounded text-yellow-500 text-xs tracking-widest backdrop-blur-md flex items-center gap-2">
+                            <span>👑 OWNER MODE</span>
+                        </div>
+                    ) : (
+                        <div className="px-3 py-1 bg-blue-500/20 border border-blue-500/50 rounded text-blue-400 text-xs tracking-widest backdrop-blur-md">
+                            VISITOR
+                        </div>
+                    )}
+                    {isEditMode && !isOwner && (
+                        <div className="px-3 py-1 bg-white/10 border border-white/20 rounded text-gray-300 text-xs tracking-widest backdrop-blur-md">
+                            PREVIEW
                         </div>
                     )}
                 </div>

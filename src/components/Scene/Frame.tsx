@@ -73,9 +73,10 @@ const FrameImage = ({ imageUrl }: { imageUrl: string }) => {
                 <planeGeometry args={[2, 1.5]} />
                 <meshStandardMaterial color="#880000" />
                 <Html position={[0, 0, 0.1]} center>
-                    <div className="bg-red-900/90 text-white text-xs p-2 rounded border border-red-500 text-center w-32">
-                        <strong>⚠️ 同期エラー</strong><br />
-                        再アップロードが必要です
+                    <div className="bg-red-900/95 text-white text-[10px] p-2 rounded border border-red-500 text-center w-40 break-all leading-tight">
+                        <strong>⚠️ ERROR</strong><br />
+                        <span className="opacity-75">Failed to load:</span><br />
+                        <span className="text-[8px] font-mono select-all">{imageUrl.slice(0, 30)}...</span>
                     </div>
                 </Html>
             </mesh>
