@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { v4 as uuidv4 } from 'uuid';
 import { useAuth } from '../hooks/useAuth';
@@ -7,21 +7,36 @@ export const Home: React.FC = () => {
     const navigate = useNavigate();
     const { user, login } = useAuth();
 
-    const [showVisitModal, setShowVisitModal] = React.useState(false);
-    const [visitId, setVisitId] = React.useState('');
+    // Googleログインボタンのコンポーネントを直接埋め込むのではなく、
+    // useAuthのlogin関数を使ってデザインを統一する
+
+    const [showVisitModal, setShowVisitModal] = useState(false);
+    const [visitId, setVisitId] = useState('');
 
     const handleEnterDemo = () => {
         const demoId = uuidv4();
         navigate(`/museum/${demoId}#edit`);
     };
 
-    const handleEnterMyMuseum = () => {
+    const handleEnterMyMuseum = async () => {
         if (user) {
             navigate(`/museum/${user.uid}#edit`);
         } else {
-            login();
+            try {
+                await login();
+                // login関数内でリダイレクトしない場合、ここで監視が必要だが
+                // onAuthStateChangedが発火して再レンダリングされ、
+                // 次のクリックで遷移できる。
+                // UX向上のため、ログイン成功時のリダイレクトはuseEffectで行うか、
+                // ここでawait後に遷移する（ただしloginがPromiseを返す前提）
+            } catch (error) {
+                // エラーハンドリング
+            }
         }
     };
+
+    // ユーザーがログインしたら自動的に自分のミュージアムへ飛ばすロジックは
+    // ここでは入れない（ユーザーが選べるようにする）
 
     const handleVisitSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -31,16 +46,16 @@ export const Home: React.FC = () => {
     };
 
     return (
-        <div className="w-full h-screen bg-black text-white flex flex-col items-center justify-center overflow-hidden font-serif">
+        <div className="w-full h-screen bg-black text-white flex flex-col items-center justify-center overflow-hidden font-serif relative">
             {/* Background Effects */}
-            <div className="absolute inset-0 z-0 opacity-30">
+            <div className="absolute inset-0 z-0 opacity-30 pointer-events-none">
                 <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-blue-900 rounded-full blur-[120px] animate-pulse" />
                 <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-purple-900 rounded-full blur-[120px] animate-pulse delay-1000" />
             </div>
 
-            <div className="z-10 text-center space-y-12 max-w-4xl px-8">
+            <div className="z-10 text-center space-y-12 max-w-4xl px-8 w-full">
                 {/* Title Section */}
-                <div className="space-y-4">
+                <div className="space-y-4 animate-fadeIn">
                     <p className="text-sm tracking-[0.3em] text-gray-400 uppercase">Archive of Silence and Memory</p>
                     <h1 className="text-6xl md:text-8xl font-thin tracking-widest leading-tight">
                         私だけの<br />
@@ -55,35 +70,20 @@ export const Home: React.FC = () => {
                 </div>
 
                 {/* Action Buttons */}
-                <div className="flex flex-col md:flex-row gap-8 justify-center items-center mt-12">
+                <div className="flex flex-col md:flex-row gap-6 justify-center items-center mt-12 animate-fadeIn" style={{ animationDelay: '0.3s' }}>
 
-                    {/* User Personal Museum */}
+                    {/* Login / My Museum Button */}
                     <button
                         onClick={handleEnterMyMuseum}
-                        className="group relative px-8 py-4 bg-white/5 border border-white/20 backdrop-blur-sm transition-all duration-500 hover:bg-white/10 hover:border-white/50 w-full md:w-auto min-w-[280px]"
+                        className="group relative px-8 py-4 bg-gradient-to-r from-blue-900/30 to-purple-900/30 border border-white/20 backdrop-blur-sm transition-all duration-500 hover:bg-white/10 hover:border-white/50 w-full md:w-auto min-w-[280px] rounded-lg overflow-hidden"
                     >
-                        <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-purple-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                        <span className="relative flex flex-col items-center">
-                            <span className="text-xl font-medium tracking-widest">
-                                {user ? '私の美術館へ' : 'ログインして作成'}
+                        <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 to-purple-600/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                        <span className="relative flex flex-col items-center z-10">
+                            <span className="text-xl font-medium tracking-widest text-white">
+                                {user ? '私の美術館へ' : 'Googleでログイン'}
                             </span>
-                            <span className="text-xs text-gray-400 mt-2 font-sans tracking-wide">
-                                {user ? '保存された空間を開く' : 'Googleアカウントで保存'}
-                            </span>
-                        </span>
-                    </button>
-
-                    {/* Visit Other Museum */}
-                    <button
-                        onClick={() => setShowVisitModal(true)}
-                        className="group relative px-8 py-4 bg-white/5 border border-white/10 backdrop-blur-sm transition-all duration-500 hover:bg-white/10 hover:border-white/30 w-full md:w-auto min-w-[280px]"
-                    >
-                        <span className="relative flex flex-col items-center">
-                            <span className="text-xl font-medium tracking-widest">
-                                他の美術館へ
-                            </span>
-                            <span className="text-xs text-gray-400 mt-2 font-sans tracking-wide">
-                                IDを入力して入館
+                            <span className="text-xs text-blue-200 mt-2 font-sans tracking-wide">
+                                {user ? '保存された空間を開く' : 'いつまでも残る、あなただけの展示室'}
                             </span>
                         </span>
                     </button>
@@ -91,7 +91,7 @@ export const Home: React.FC = () => {
                     {/* Demo Museum */}
                     <button
                         onClick={handleEnterDemo}
-                        className="group relative px-8 py-4 bg-transparent border border-white/10 transition-all duration-300 hover:border-white/30 w-full md:w-auto min-w-[280px]"
+                        className="group relative px-8 py-4 bg-transparent border border-white/10 transition-all duration-300 hover:border-white/30 w-full md:w-auto min-w-[280px] rounded-lg"
                     >
                         <span className="flex flex-col items-center">
                             <span className="text-lg font-light tracking-widest text-gray-300 group-hover:text-white transition-colors">
@@ -102,13 +102,29 @@ export const Home: React.FC = () => {
                             </span>
                         </span>
                     </button>
+
+                    {/* Visit Other Museum */}
+                    <button
+                        onClick={() => setShowVisitModal(true)}
+                        className="group relative px-8 py-4 bg-transparent border border-white/10 transition-all duration-300 hover:border-white/30 w-full md:w-auto min-w-[280px] rounded-lg"
+                    >
+                        <span className="flex flex-col items-center">
+                            <span className="text-lg font-light tracking-widest text-gray-300 group-hover:text-white transition-colors">
+                                友人の美術館へ
+                            </span>
+                            <span className="text-xs text-gray-500 mt-2 font-sans tracking-wide group-hover:text-gray-400 transition-colors">
+                                IDを入力して入館
+                            </span>
+                        </span>
+                    </button>
+
                 </div>
             </div>
 
             {/* Visit Modal */}
             {showVisitModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fadeIn">
-                    <div className="relative w-full max-w-md p-8 bg-black/80 border border-white/10 rounded-2xl shadow-2xl animate-scaleIn">
+                    <div className="relative w-full max-w-md p-8 bg-black/80 border border-white/10 rounded-2xl shadow-2xl animate-scaleIn mx-4">
                         <button
                             onClick={() => setShowVisitModal(false)}
                             className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors"
@@ -116,7 +132,7 @@ export const Home: React.FC = () => {
                             ✕
                         </button>
 
-                        <h2 className="text-2xl font-thin tracking-widest text-center mb-8">
+                        <h2 className="text-2xl font-thin tracking-widest text-center mb-8 text-white">
                             美術館を訪れる
                         </h2>
 
@@ -138,7 +154,7 @@ export const Home: React.FC = () => {
                             <button
                                 type="submit"
                                 disabled={!visitId.trim()}
-                                className="w-full py-3 bg-gradient-to-r from-blue-900/50 to-purple-900/50 border border-white/10 rounded-lg font-medium tracking-widest hover:bg-white/5 hover:border-white/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="w-full py-3 bg-gradient-to-r from-blue-900/50 to-purple-900/50 border border-white/10 rounded-lg font-medium tracking-widest hover:bg-white/5 hover:border-white/30 transition-all text-white disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 入館する
                             </button>
@@ -148,7 +164,7 @@ export const Home: React.FC = () => {
             )}
 
             {/* Footer */}
-            <footer className="absolute bottom-8 text-center w-full z-10">
+            <footer className="absolute bottom-8 text-center w-full z-10 pointer-events-none">
                 <p className="text-xs text-gray-600 tracking-widest font-sans">
                     © 2026 WATASHI MUSEUM. All Rights Reserved.
                 </p>

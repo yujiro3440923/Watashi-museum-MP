@@ -40,7 +40,10 @@ export const useRemotePlayers = (museumId: string | undefined, playerId: string)
                     const data = doc.data() as PlayerData;
                     // Filter out self and potentially stale users (logic omitted for simplicity)
                     if (doc.id !== playerId) {
-                        activePlayers.push({ ...data, id: doc.id });
+                        const lastSeen = data.lastSeen?.toMillis?.() || 0;
+                        if (Date.now() - lastSeen < 60000) { // 60 seconds timeout
+                            activePlayers.push({ ...data, id: doc.id });
+                        }
                     }
                 });
                 setOthers(activePlayers);

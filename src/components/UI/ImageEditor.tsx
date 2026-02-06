@@ -4,10 +4,9 @@ import type { Point, Area } from 'react-easy-crop';
 
 interface ImageEditorProps {
     onClose: () => void;
-    onSave: (data: { title: string; description: string; imageUrl: string; imageFile?: File }) => void;
+    onSave: (data: { title: string; description: string; imageUrl: string; imageFile?: File }) => Promise<void> | void;
     initialData?: { title: string; description: string; imageUrl: string };
 }
-
 
 export const ImageEditor: React.FC<ImageEditorProps> = ({ onClose, onSave, initialData }) => {
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -20,6 +19,7 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ onClose, onSave, initi
     const [isCropping, setIsCropping] = useState(false);
     const [crop, setCrop] = useState<Point>({ x: 0, y: 0 });
     const [zoom, setZoom] = useState(1);
+    const [rotation, setRotation] = useState(0);
     const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
 
     const onCropComplete = useCallback((_croppedArea: Area, currentCroppedAreaPixels: Area) => {
@@ -31,11 +31,14 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ onClose, onSave, initi
             const image = new Image();
             image.addEventListener('load', () => resolve(image));
             image.addEventListener('error', (error) => reject(error));
-            image.setAttribute('crossOrigin', 'anonymous');
+            // Only set crossOrigin for external URLs, not for blob URLs
+            if (url.startsWith('http://') || url.startsWith('https://')) {
+                image.setAttribute('crossOrigin', 'anonymous');
+            }
             image.src = url;
         });
 
-    const getCroppedImg = async (imageSrc: string, pixelCrop: Area): Promise<string> => {
+    const getCroppedImg = async (imageSrc: string, pixelCrop: Area, rotation = 0): Promise<string> => {
         const image = await createImage(imageSrc);
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
@@ -44,19 +47,35 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ onClose, onSave, initi
             return '';
         }
 
+        const maxSize = Math.max(image.width, image.height);
+        const safeArea = 2 * ((maxSize / 2) * Math.sqrt(2));
+
+        canvas.width = safeArea;
+        canvas.height = safeArea;
+
+        // Translate and Rotate around center
+        ctx.translate(safeArea / 2, safeArea / 2);
+        ctx.rotate((rotation * Math.PI) / 180);
+        ctx.translate(-safeArea / 2, -safeArea / 2);
+
+        // Draw image centered in safe area
+        ctx.drawImage(
+            image,
+            safeArea / 2 - image.width * 0.5,
+            safeArea / 2 - image.height * 0.5
+        );
+
+        const data = ctx.getImageData(0, 0, safeArea, safeArea);
+
+        // Resize canvas to final crop size
         canvas.width = pixelCrop.width;
         canvas.height = pixelCrop.height;
 
-        ctx.drawImage(
-            image,
-            pixelCrop.x,
-            pixelCrop.y,
-            pixelCrop.width,
-            pixelCrop.height,
-            0,
-            0,
-            pixelCrop.width,
-            pixelCrop.height
+        // Place the cropped image data into the resized canvas
+        ctx.putImageData(
+            data,
+            Math.round(0 - safeArea / 2 + image.width * 0.5 - pixelCrop.x),
+            Math.round(0 - safeArea / 2 + image.height * 0.5 - pixelCrop.y)
         );
 
         return new Promise((resolve) => {
@@ -78,32 +97,63 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ onClose, onSave, initi
         }
     };
 
+    const [isLoading, setIsLoading] = useState(false);
+
+    // ... (rest of state)
+
     const handleCropSave = async () => {
         if (originalFileUrl && croppedAreaPixels) {
+            setIsLoading(true);
             try {
-                const croppedImage = await getCroppedImg(originalFileUrl, croppedAreaPixels);
+                const croppedImage = await getCroppedImg(originalFileUrl, croppedAreaPixels, rotation);
                 setPreviewUrl(croppedImage);
                 setIsCropping(false);
             } catch (e) {
-                console.error(e);
+                console.error("Crop error:", e);
+                alert("画像の切り抜きに失敗しました。");
+            } finally {
+                setIsLoading(false);
             }
         }
     };
 
     const handleSave = async () => {
-        if (previewUrl) {
-            // Convert blob URL to File object if needed, or just pass the URL if it's external
-            // For simplicity in this demo, we assume the upload logic handles blob URLs or we convert here.
-            // But since our saveFrame expects a File object for new uploads, we might need to fetch the blob.
+        if (!previewUrl) {
+            alert("画像を選択してください。");
+            return;
+        }
+
+        if (!title.trim()) {
+            alert("タイトルを入力してください。");
+            return;
+        }
+
+        setIsLoading(true);
+        try {
+            console.log("保存処理を開始します...", { title, description, previewUrl });
 
             let fileToUpload: File | undefined = undefined;
             if (previewUrl.startsWith('blob:')) {
+                console.log("Blob URLから画像を取得中...");
                 const response = await fetch(previewUrl);
+                if (!response.ok) {
+                    throw new Error(`画像の取得に失敗しました: ${response.status}`);
+                }
                 const blob = await response.blob();
+                console.log("Blob取得成功:", blob.size, "bytes");
                 fileToUpload = new File([blob], "cropped_image.jpg", { type: "image/jpeg" });
             }
 
-            onSave({ title, description, imageUrl: previewUrl, imageFile: fileToUpload });
+            console.log("onSaveを呼び出します...", { fileToUpload: !!fileToUpload });
+            await onSave({ title, description, imageUrl: previewUrl, imageFile: fileToUpload });
+            console.log("保存完了");
+            onClose(); // 保存成功時に確実に閉じる
+        } catch (e) {
+            console.error("保存エラーの詳細:", e);
+            const errorMessage = e instanceof Error ? e.message : "不明なエラー";
+            alert(`保存に失敗しました。\n詳細: ${errorMessage}\n\nコンソールを確認してください。`);
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -124,36 +174,52 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ onClose, onSave, initi
                 </div>
 
                 {isCropping && originalFileUrl ? (
-                    <div className="flex flex-col gap-4 h-[400px]">
+                    <div className="flex flex-col gap-4">
                         <div className="relative w-full h-[300px] bg-black/50 rounded-lg overflow-hidden border border-white/10">
                             <Cropper
                                 image={originalFileUrl}
                                 crop={crop}
                                 zoom={zoom}
+                                rotation={rotation}
                                 aspect={4 / 3}
                                 onCropChange={setCrop}
                                 onCropComplete={onCropComplete}
                                 onZoomChange={setZoom}
+                                onRotationChange={setRotation}
                             />
                         </div>
-                        <div className="flex items-center gap-2">
-                            <span className="text-xs">Zoom</span>
-                            <input
-                                type="range"
-                                value={zoom}
-                                min={1}
-                                max={3}
-                                step={0.1}
-                                aria-labelledby="Zoom"
-                                onChange={(e) => setZoom(Number(e.target.value))}
-                                className="w-full h-1 bg-gray-600 rounded-lg appearance-none cursor-pointer"
-                            />
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="flex flex-col gap-1">
+                                <label className="text-xs text-gray-400">Zoom</label>
+                                <input
+                                    type="range"
+                                    value={zoom}
+                                    min={1}
+                                    max={3}
+                                    step={0.1}
+                                    onChange={(e) => setZoom(Number(e.target.value))}
+                                    className="w-full h-1 bg-gray-600 rounded-lg appearance-none cursor-pointer"
+                                />
+                            </div>
+                            <div className="flex flex-col gap-1">
+                                <label className="text-xs text-gray-400">Rotation</label>
+                                <input
+                                    type="range"
+                                    value={rotation}
+                                    min={0}
+                                    max={360}
+                                    step={1}
+                                    onChange={(e) => setRotation(Number(e.target.value))}
+                                    className="w-full h-1 bg-gray-600 rounded-lg appearance-none cursor-pointer"
+                                />
+                            </div>
                         </div>
                         <button
                             onClick={handleCropSave}
-                            className="w-full py-2 bg-white text-black font-medium tracking-widest rounded hover:bg-gray-200 transition-colors"
+                            disabled={isLoading}
+                            className="w-full py-2 bg-white text-black font-medium tracking-widest rounded hover:bg-gray-200 transition-colors disabled:opacity-50"
                         >
-                            切り抜く
+                            {isLoading ? '処理中...' : '決定（切り抜き・回転）'}
                         </button>
                     </div>
                 ) : (
@@ -209,10 +275,10 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ onClose, onSave, initi
                         {/* Actions */}
                         <button
                             onClick={handleSave}
-                            disabled={!previewUrl}
+                            disabled={!previewUrl || isLoading}
                             className="w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg font-medium tracking-widest hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-900/20"
                         >
-                            保存する
+                            {isLoading ? '保存中...' : '保存する'}
                         </button>
                     </>
                 )}

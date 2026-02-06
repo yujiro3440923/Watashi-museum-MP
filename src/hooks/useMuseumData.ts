@@ -56,19 +56,39 @@ export const useMuseumData = (museumId: string | undefined) => {
     }, [museumId]);
 
     const saveFrame = async (frameId: string, data: FrameData, file?: File) => {
-        if (!museumId) return;
+        if (!museumId) {
+            console.error("museumIdが設定されていません");
+            throw new Error("ミュージアムIDが設定されていません");
+        }
+
+        console.log("フレーム保存開始:", { frameId, hasFile: !!file, data });
 
         try {
             let finalImageUrl = data.imageUrl;
 
             // Upload image if a new file is provided
             if (file) {
-                const storageRef = ref(storage, `museums/${museumId}/${frameId}/${file.name}`);
+                console.log("画像をアップロード中...", {
+                    fileName: file.name,
+                    fileSize: file.size,
+                    fileType: file.type
+                });
+
+                const storagePath = `museums/${museumId}/${frameId}/${file.name}`;
+                console.log("Storage path:", storagePath);
+
+                const storageRef = ref(storage, storagePath);
                 await uploadBytes(storageRef, file);
+                console.log("アップロード完了、URLを取得中...");
+
                 finalImageUrl = await getDownloadURL(storageRef);
+                console.log("画像URL取得成功:", finalImageUrl);
+            } else {
+                console.log("ファイルなし、既存のURLを使用:", finalImageUrl);
             }
 
             // Save to Firestore
+            console.log("Firestoreに保存中...");
             const frameRef = doc(db, 'museums', museumId, 'frames', frameId);
             await setDoc(frameRef, {
                 title: data.title,
@@ -77,9 +97,16 @@ export const useMuseumData = (museumId: string | undefined) => {
                 updatedAt: new Date()
             }, { merge: true });
 
+            console.log("Firestoreへの保存完了");
+
         } catch (e) {
-            console.error("Error saving frame:", e);
-            alert("Failed to save changes. Check console for details.");
+            console.error("フレーム保存エラーの詳細:", e);
+            if (e instanceof Error) {
+                console.error("エラーメッセージ:", e.message);
+                console.error("スタックトレース:", e.stack);
+            }
+            const errorMessage = e instanceof Error ? e.message : "不明なエラー";
+            throw new Error(`保存に失敗しました: ${errorMessage}`);
         }
     };
 
