@@ -70,6 +70,13 @@ export const useMuseumData = (museumId: string | undefined) => {
 
         console.log("フレーム保存開始:", { frameId, hasFile: !!file, data });
 
+        // BLOB URL CHECK:
+        // blob: URL cannot be saved directly to Firestore as it is local-only.
+        if (!file && data.imageUrl && data.imageUrl.startsWith('blob:')) {
+            console.error("Critical Error: Creating post with blob URL without file upload.");
+            throw new Error("システムの不具合により画像データが無効です。もう一度画像を選択してアップロードしてください。（Blob URL Detected）");
+        }
+
         try {
             let finalImageUrl = data.imageUrl;
 

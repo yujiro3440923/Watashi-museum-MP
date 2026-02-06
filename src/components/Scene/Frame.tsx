@@ -104,3 +104,38 @@ const FrameImage = ({ imageUrl }: { imageUrl: string }) => {
         </group >
     );
 };
+
+// Helper component to handle texture loading with error logging
+const FrameImage = ({ imageUrl }: { imageUrl: string }) => {
+    const isBlob = imageUrl.startsWith('blob:');
+
+    if (isBlob) {
+        return (
+            <mesh position={[0, 0, 0.06]}>
+                <planeGeometry args={[2, 1.5]} />
+                <meshStandardMaterial color="#880000" />
+                <Html position={[0, 0, 0.1]} center>
+                    <div className="bg-red-900/90 text-white text-xs p-2 rounded border border-red-500 text-center w-32">
+                        <strong>⚠️ 同期エラー</strong><br />
+                        再アップロードが必要です
+                    </div>
+                </Html>
+            </mesh>
+        );
+    }
+
+    // Simple debug approach:
+    const img = new window.Image();
+    img.src = imageUrl;
+    img.onerror = (e) => console.error("Failed to load image texture:", imageUrl, e);
+
+    return (
+        <Image
+            url={imageUrl}
+            position={[0, 0, 0.06]}
+            scale={[2, 1.5]}
+            transparent
+            opacity={1}
+        />
+    );
+};
