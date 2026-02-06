@@ -7,13 +7,13 @@ import { getAuth } from "firebase/auth";
 // TODO: Replace the following with your app's Firebase project configuration
 // See: https://firebase.google.com/docs/web/setup#available-libraries
 const firebaseConfig = {
-    apiKey: "AIzaSyD8ecPPtjnJiPimg2_4zmEzYhlbHfryT5Y",
-    authDomain: "watashi-museum.firebaseapp.com",
-    projectId: "watashi-museum",
-    storageBucket: "watashi-museum.firebasestorage.app",
-    messagingSenderId: "185581773268",
-    appId: "1:185581773268:web:22d0342d78d45726db3641",
-    measurementId: "G-1K086ZP7V5"
+    apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+    storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+    appId: import.meta.env.VITE_FIREBASE_APP_ID,
+    measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
 // Initialize Firebase
