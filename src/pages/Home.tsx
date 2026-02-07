@@ -25,7 +25,10 @@ export const Home: React.FC = () => {
             return;
         }
 
-        if (db.app.options.apiKey === "API_KEY") return;
+        // Check for default API key but allow execution (might fail if not configured)
+        if (db.app.options.apiKey === "API_KEY") {
+            console.warn("Using default API_KEY. Search might fail if Firebase is not configured.");
+        }
 
         try {
             // Search museums by ID (document ID)
