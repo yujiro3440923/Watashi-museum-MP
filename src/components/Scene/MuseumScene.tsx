@@ -1,4 +1,4 @@
-import { Suspense, type FC, useMemo, useState, useEffect } from 'react';
+import { Suspense, type FC, useMemo, useState, useEffect, useRef } from 'react';
 import { Canvas, useThree, useFrame } from '@react-three/fiber';
 import { Environment } from '@react-three/drei';
 import { Vector3, Euler, Quaternion } from 'three';
@@ -7,6 +7,7 @@ import { Frame } from './Frame';
 import { Avatar } from './Avatar';
 import { FirstPersonController } from './FirstPersonController';
 import { PlayerSync } from '../../hooks/useMultiplayer';
+import { MobileControls } from '../UI/MobileControls';
 
 interface MuseumSceneProps {
     isEditMode: boolean;
@@ -20,6 +21,20 @@ interface MuseumSceneProps {
 
 export const MuseumScene: FC<MuseumSceneProps> = ({ isEditMode, onFrameClick, framesData = {}, isInteractionDisabled = false, otherPlayers = [], museumId, playerId }) => {
     const [isSlideshow, setIsSlideshow] = useState(false);
+
+    // Mobile Controls Refs
+    const mobileMoveRef = useRef({ x: 0, y: 0 });
+    const mobileLookRef = useRef({ x: 0, y: 0 });
+
+    const handleMobileMove = (v: { x: number; y: number }) => {
+        mobileMoveRef.current = v;
+    };
+
+    const handleMobileLook = (v: { x: number; y: number }) => {
+        // Accumulate delta for the FirstPersonController to consume
+        mobileLookRef.current.x += v.x;
+        mobileLookRef.current.y += v.y;
+    };
 
     // Generate frames programmatically
     const frames = useMemo(() => {
@@ -101,6 +116,11 @@ export const MuseumScene: FC<MuseumSceneProps> = ({ isEditMode, onFrameClick, fr
                 </div>
             )}
 
+            {/* Mobile Controls (Always visible for now, or use CSS media queries to hide on desktop) */}
+            {!isSlideshow && !isEditMode && !isInteractionDisabled && (
+                <MobileControls onMove={handleMobileMove} onLook={handleMobileLook} />
+            )}
+
             <Canvas shadows camera={{ position: [0, 2, 8], fov: 60 }}>
                 <color attach="background" args={['#202020']} />
                 {!isSlideshow && <color attach="background" args={['#f0f0f0']} />}
@@ -137,7 +157,11 @@ export const MuseumScene: FC<MuseumSceneProps> = ({ isEditMode, onFrameClick, fr
 
                     {museumId && playerId && <PlayerSync museumId={museumId} playerId={playerId} />}
 
-                    {!isSlideshow && <FirstPersonController enabled={!isInteractionDisabled} />}
+                    {!isSlideshow && <FirstPersonController
+                        enabled={!isInteractionDisabled}
+                        moveRef={mobileMoveRef}
+                        lookRef={mobileLookRef}
+                    />}
 
                     {isSlideshow && activeFrames.length > 0 && (
                         <CameraMover

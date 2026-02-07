@@ -4,8 +4,14 @@ import { Vector3, Euler } from 'three';
 
 const MOVEMENT_SPEED = 0.15;
 const ROTATION_SPEED = 0.002;
+const MOBILE_ROTATION_SPEED = 0.005; // Slightly faster for touch
 
-export const FirstPersonController: FC<{ isLocked?: boolean; enabled?: boolean }> = ({ isLocked = false, enabled = true }) => {
+export const FirstPersonController: FC<{
+    isLocked?: boolean;
+    enabled?: boolean;
+    moveRef?: React.MutableRefObject<{ x: number; y: number }>;
+    lookRef?: React.MutableRefObject<{ x: number; y: number }>;
+}> = ({ isLocked = false, enabled = true, moveRef, lookRef }) => {
     const { camera } = useThree();
     const moveState = useRef({
         forward: false,
@@ -40,8 +46,6 @@ export const FirstPersonController: FC<{ isLocked?: boolean; enabled?: boolean }
         };
 
         const handleMouseDown = (e: MouseEvent) => {
-            // Only start drag if not clicking on an interactive element?
-            // Actually, we want to allow looking around anytime, but we need to differentiate "click" from "drag".
             dragRef.current.active = true;
             dragRef.current.prevX = e.clientX;
             dragRef.current.prevY = e.clientY;
@@ -54,23 +58,18 @@ export const FirstPersonController: FC<{ isLocked?: boolean; enabled?: boolean }
         const handleMouseMove = (e: MouseEvent) => {
             if (!dragRef.current.active && !isLocked) return;
 
-            // Check if we moved significantly to consider it a drag
             const dx = Math.abs(e.clientX - dragRef.current.prevX);
             const dy = Math.abs(e.clientY - dragRef.current.prevY);
-            if (dx < 2 && dy < 2) return; // Ignore tiny movements (clicks)
+            if (dx < 2 && dy < 2) return;
 
             const movementX = isLocked ? e.movementX : e.clientX - dragRef.current.prevX;
-            // For Y, we might want to clamp or invert
             // const movementY = isLocked ? e.movementY : e.clientY - dragRef.current.prevY; 
 
-            // Rotate camera (Yaw only for simple walking, or Yaw+Pitch)
-            // Lets do simple Yaw (left/right) for now to keep floor level, 
-            // or use Euler to handle both if we want to look up/down.
             const euler = new Euler(0, 0, 0, 'YXZ');
             euler.setFromQuaternion(camera.quaternion);
 
             euler.y -= movementX * ROTATION_SPEED;
-            // euler.x -= movementY * ROTATION_SPEED; // Uncomment for look up/down
+            // euler.x -= movementY * ROTATION_SPEED;
 
             camera.quaternion.setFromEuler(euler);
 
@@ -98,30 +97,56 @@ export const FirstPersonController: FC<{ isLocked?: boolean; enabled?: boolean }
     useFrame(() => {
         if (!enabled) return;
 
+        // --- Rotation (Mobile) ---
+        if (lookRef && (lookRef.current.x !== 0 || lookRef.current.y !== 0)) {
+            const euler = new Euler(0, 0, 0, 'YXZ');
+            euler.setFromQuaternion(camera.quaternion);
+
+            // Apply look delta
+            euler.y -= lookRef.current.x * MOBILE_ROTATION_SPEED;
+            // euler.x -= lookRef.current.y * MOBILE_ROTATION_SPEED; // Optional Pitch
+
+            camera.quaternion.setFromEuler(euler);
+
+            // Reset delta
+            lookRef.current = { x: 0, y: 0 };
+        }
+
+        // --- Movement ---
         const direction = new Vector3();
-        const frontVector = new Vector3(
-            0,
-            0,
-            Number(moveState.current.backward) - Number(moveState.current.forward)
-        );
-        const sideVector = new Vector3(
-            Number(moveState.current.left) - Number(moveState.current.right),
-            0,
-            0
-        );
+
+        // Keyboard inputs
+        const kbForward = Number(moveState.current.backward) - Number(moveState.current.forward);
+        const kbSide = Number(moveState.current.left) - Number(moveState.current.right);
+
+        // Mobile inputs
+        let mobForward = 0;
+        let mobSide = 0;
+
+        if (moveRef) {
+            // Joystick y: negative is up (forward) usually in screen coords, 
+            // but our MobileControls returns:
+            // y < 0 (up), y > 0 (down)
+            // In 3D: forward is negative Z. So y < 0 should map to negative Z.
+            // So we add y directly?
+            // Let's test: Stick Up -> y=-1. Z should be -1 (Forward). Correct.
+            mobForward = moveRef.current.y;
+            mobSide = moveRef.current.x;
+        }
+
+        const frontVector = new Vector3(0, 0, kbForward + mobForward);
+        const sideVector = new Vector3(kbSide + mobSide, 0, 0);
 
         direction
             .subVectors(frontVector, sideVector)
             .normalize()
             .applyEuler(camera.rotation);
 
-        // Keep movement on the XZ plane (prevent flying)
         direction.y = 0;
 
         camera.position.addScaledVector(direction, MOVEMENT_SPEED);
 
-        // Floor constraint (simple)
-        if (camera.position.y !== 2) camera.position.y = 2; // Eye level
+        if (camera.position.y !== 2) camera.position.y = 2;
     });
 
     return null;
