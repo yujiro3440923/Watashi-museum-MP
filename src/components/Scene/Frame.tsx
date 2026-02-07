@@ -8,6 +8,7 @@ interface FrameProps {
     isEditMode: boolean;
     onClick?: (id: string) => void;
     isRotated?: boolean;
+    imageUrl?: string;
 }
 
 export const Frame: FC<FrameProps> = ({ id, position, rotation, isEditMode, onClick, imageUrl, isRotated = false }) => {
