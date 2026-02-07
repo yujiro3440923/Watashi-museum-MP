@@ -188,12 +188,11 @@ export const Home: React.FC = () => {
                                                 key={result}
                                                 type="button"
                                                 onClick={() => {
-                                                    setVisitId(result);
-                                                    setSearchResults([]);
+                                                    navigate(`/museum/${result}`);
                                                 }}
-                                                className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-white/10 hover:text-white transition-colors flex items-center gap-2"
+                                                className="w-full text-left px-4 py-3 text-sm text-gray-300 hover:bg-blue-900/40 hover:text-white transition-colors flex items-center gap-3 cursor-pointer group border-b border-white/5 last:border-0"
                                             >
-                                                <span className="text-xs">🏛️</span>
+                                                <span className="text-xs group-hover:text-blue-400 transition-colors">➜</span>
                                                 <span className="font-mono">{result}</span>
                                             </button>
                                         ))}
