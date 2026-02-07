@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 
 interface MobileControlsProps {
     onMove: (vector: { x: number; y: number }) => void;
@@ -8,7 +8,6 @@ interface MobileControlsProps {
 export const MobileControls: React.FC<MobileControlsProps> = ({ onMove, onLook }) => {
     // Joystick State
     const [stickPosition, setStickPosition] = useState({ x: 0, y: 0 });
-    const [isMoving, setIsMoving] = useState(false);
     const joyBaseRef = useRef<HTMLDivElement>(null);
     const joyTouchIdRef = useRef<number | null>(null);
     const joyCenterRef = useRef({ x: 0, y: 0 });
@@ -24,9 +23,9 @@ export const MobileControls: React.FC<MobileControlsProps> = ({ onMove, onLook }
         // Prevent default only if necessary, but here we want to prevent scrolling
         // e.preventDefault(); 
 
+
         const touch = e.changedTouches[0];
         joyTouchIdRef.current = touch.identifier;
-        setIsMoving(true);
 
         if (joyBaseRef.current) {
             const rect = joyBaseRef.current.getBoundingClientRect();
@@ -55,7 +54,6 @@ export const MobileControls: React.FC<MobileControlsProps> = ({ onMove, onLook }
         const touch = Array.from(e.changedTouches).find(t => t.identifier === joyTouchIdRef.current);
         if (touch) {
             joyTouchIdRef.current = null;
-            setIsMoving(false);
             setStickPosition({ x: 0, y: 0 });
             onMove({ x: 0, y: 0 });
         }
