@@ -73,10 +73,41 @@ export const Home: React.FC = () => {
     // ユーザーがログインしたら自動的に自分のミュージアムへ飛ばすロジックは
     // ここでは入れない（ユーザーが選べるようにする）
 
-    const handleVisitSubmit = (e: React.FormEvent) => {
+    const handleVisitSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (visitId.trim()) {
-            navigate(`/museum/${visitId.trim()}`);
+        const inputId = visitId.trim();
+        if (!inputId) return;
+
+        // If default API key, just try to navigate directly (search won't work)
+        if (db.app.options.apiKey === "API_KEY") {
+            navigate(`/museum/${inputId}`);
+            return;
+        }
+
+        try {
+            // If ID is short or partial, try to find the full ID first
+            const museumsRef = collection(db, 'museums');
+            const q = query(
+                museumsRef,
+                orderBy('__name__'),
+                startAt(inputId),
+                endAt(inputId + '\uf8ff'),
+                limit(1)
+            );
+            const snapshot = await getDocs(q);
+
+            if (!snapshot.empty) {
+                // Found a matching museum ID
+                const fullId = snapshot.docs[0].id;
+                console.log(`Redirecting from partial ID ${inputId} to full ID ${fullId}`);
+                navigate(`/museum/${fullId}`);
+            } else {
+                // No match found, try navigating to input ID anyway
+                navigate(`/museum/${inputId}`);
+            }
+        } catch (error) {
+            console.error("Error finding museum:", error);
+            navigate(`/museum/${inputId}`);
         }
     };
 
