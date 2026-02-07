@@ -59,10 +59,23 @@ export const Museum: React.FC = () => {
         <div className="w-full h-full bg-black text-white relative font-serif">
             {/* Header HUD */}
             <div className="absolute top-0 left-0 w-full p-6 z-10 flex justify-between items-start pointer-events-none">
-                <div className="space-y-1">
-                    <h2 className="text-lg tracking-widest drop-shadow-md opacity-80">
-                        Museo No. <span className="font-sans">{id?.slice(0, 8)}</span>
-                    </h2>
+                <div className="space-y-1 pointer-events-auto">
+                    <div className="flex items-center gap-3">
+                        <h2 className="text-lg tracking-widest drop-shadow-md opacity-80">
+                            Museo No. <span className="font-sans font-bold">{id?.slice(0, 8)}</span>
+                        </h2>
+                        <button
+                            onClick={() => {
+                                const url = `${window.location.origin}/museum/${id}`;
+                                navigator.clipboard.writeText(url);
+                                alert("共有用URLをコピーしました！\n誰かに送って、あなたの美術館に招待しましょう。");
+                            }}
+                            className="bg-white/10 hover:bg-white/20 text-white text-[10px] px-2 py-1 rounded border border-white/10 transition-colors flex items-center gap-1"
+                            title="招待用URLをコピー"
+                        >
+                            <span>🔗</span> 共有
+                        </button>
+                    </div>
                     <div className="text-xs text-gray-400 tracking-wider flex items-center gap-2">
                         <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
                         <span>来館者数: <span className="font-sans">{others.length + 1}</span>名</span>

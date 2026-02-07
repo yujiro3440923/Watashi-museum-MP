@@ -110,7 +110,7 @@ export const Home: React.FC = () => {
                     >
                         <span className="flex flex-col items-center">
                             <span className="text-lg font-light tracking-widest text-gray-300 group-hover:text-white transition-colors">
-                                友人の美術館へ
+                                誰かの美術館へ
                             </span>
                             <span className="text-xs text-gray-500 mt-2 font-sans tracking-wide group-hover:text-gray-400 transition-colors">
                                 IDを入力して入館
