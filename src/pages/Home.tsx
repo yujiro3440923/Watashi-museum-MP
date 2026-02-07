@@ -192,8 +192,13 @@ export const Home: React.FC = () => {
                                                 }}
                                                 className="w-full text-left px-4 py-3 text-sm text-gray-300 hover:bg-blue-900/40 hover:text-white transition-colors flex items-center gap-3 cursor-pointer group border-b border-white/5 last:border-0"
                                             >
-                                                <span className="text-xs group-hover:text-blue-400 transition-colors">➜</span>
-                                                <span className="font-mono">{result}</span>
+                                                <span className="text-xs group-hover:text-blue-400 transition-colors mt-0.5">➜</span>
+                                                <div className="flex flex-col overflow-hidden">
+                                                    <span className="font-mono text-sm text-white">{result}</span>
+                                                    <span className="text-[10px] text-gray-500 font-sans truncate group-hover:text-blue-300 transition-colors">
+                                                        {window.location.origin}/museum/{result}
+                                                    </span>
+                                                </div>
                                             </button>
                                         ))}
                                     </div>
