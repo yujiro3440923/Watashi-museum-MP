@@ -7,15 +7,21 @@ interface FrameProps {
     rotation: [number, number, number];
     isEditMode: boolean;
     onClick?: (id: string) => void;
-    imageUrl?: string;
+    isRotated?: boolean;
 }
 
-export const Frame: FC<FrameProps> = ({ id, position, rotation, isEditMode, onClick, imageUrl }) => {
+export const Frame: FC<FrameProps> = ({ id, position, rotation, isEditMode, onClick, imageUrl, isRotated = false }) => {
     const [hovered, setHover] = useState(false);
 
     // Minimalist gray frame
     const frameColor = hovered && isEditMode ? '#ffbd2e' : '#555';
     const imageColor = '#e0e0e0';
+
+    // Landscape (Default) vs Portrait
+    // Frame: [2.2, 1.7, 0.1] vs [1.7, 2.2, 0.1]
+    const frameArgs: [number, number, number] = isRotated ? [1.7, 2.2, 0.1] : [2.2, 1.7, 0.1];
+    // Image Plane: [2, 1.5] vs [1.5, 2]
+    const imageArgs: [number, number] = isRotated ? [1.5, 2] : [2, 1.5];
 
     return (
         <group position={position} rotation={rotation}>
@@ -38,16 +44,16 @@ export const Frame: FC<FrameProps> = ({ id, position, rotation, isEditMode, onCl
                     if (isEditMode && onClick) onClick(id);
                 }}
             >
-                <boxGeometry args={[2.2, 1.7, 0.1]} />
+                <boxGeometry args={frameArgs} />
                 <meshStandardMaterial color={frameColor} />
             </mesh>
 
             {/* Image Canvas (Inset) */}
             {imageUrl ? (
-                <FrameImage imageUrl={imageUrl} />
+                <FrameImage imageUrl={imageUrl} size={imageArgs} />
             ) : (
                 <mesh position={[0, 0, 0.06]}>
-                    <planeGeometry args={[2, 1.5]} />
+                    <planeGeometry args={imageArgs} />
                     <meshStandardMaterial color={imageColor} />
                 </mesh>
             )}
@@ -64,13 +70,13 @@ export const Frame: FC<FrameProps> = ({ id, position, rotation, isEditMode, onCl
 };
 
 // Helper component to handle texture loading with error logging
-const FrameImage = ({ imageUrl }: { imageUrl: string }) => {
+const FrameImage = ({ imageUrl, size }: { imageUrl: string, size: [number, number] }) => {
     const isBlob = imageUrl.startsWith('blob:');
 
     if (isBlob) {
         return (
             <mesh position={[0, 0, 0.06]}>
-                <planeGeometry args={[2, 1.5]} />
+                <planeGeometry args={size} />
                 <meshStandardMaterial color="#880000" />
                 <Html position={[0, 0, 0.1]} center>
                     <div className="bg-red-900/95 text-white text-[10px] p-2 rounded border border-red-500 text-center w-40 break-all leading-tight">
@@ -92,7 +98,7 @@ const FrameImage = ({ imageUrl }: { imageUrl: string }) => {
         <Image
             url={imageUrl}
             position={[0, 0, 0.06]}
-            scale={[2, 1.5]}
+            scale={size}
             transparent
             opacity={1}
         />

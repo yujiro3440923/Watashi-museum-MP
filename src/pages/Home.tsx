@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { v4 as uuidv4 } from 'uuid';
 import { useAuth } from '../hooks/useAuth';
+import { db } from '../lib/firebase';
+import { collection, query, orderBy, startAt, endAt, limit, getDocs } from 'firebase/firestore';
 
 export const Home: React.FC = () => {
     const navigate = useNavigate();
@@ -12,6 +14,36 @@ export const Home: React.FC = () => {
 
     const [showVisitModal, setShowVisitModal] = useState(false);
     const [visitId, setVisitId] = useState('');
+    const [searchResults, setSearchResults] = useState<string[]>([]);
+
+    const handleIdChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value;
+        setVisitId(value);
+
+        if (value.length < 3) {
+            setSearchResults([]);
+            return;
+        }
+
+        if (db.app.options.apiKey === "API_KEY") return;
+
+        try {
+            // Search museums by ID (document ID)
+            const museumsRef = collection(db, 'museums');
+            const q = query(
+                museumsRef,
+                orderBy('__name__'),
+                startAt(value),
+                endAt(value + '\uf8ff'),
+                limit(5)
+            );
+            const snapshot = await getDocs(q);
+            const ids = snapshot.docs.map(doc => doc.id);
+            setSearchResults(ids);
+        } catch (error) {
+            console.error("Error searching museums:", error);
+        }
+    };
 
     const handleEnterDemo = () => {
         const demoId = uuidv4();
@@ -137,18 +169,36 @@ export const Home: React.FC = () => {
                         </h2>
 
                         <form onSubmit={handleVisitSubmit} className="space-y-6">
-                            <div className="space-y-2">
+                            <div className="space-y-2 relative">
                                 <label className="text-xs text-gray-400 tracking-wider block text-center">
                                     MUSEUM ID
                                 </label>
                                 <input
                                     type="text"
                                     value={visitId}
-                                    onChange={(e) => setVisitId(e.target.value)}
-                                    placeholder="IDを入力してください"
+                                    onChange={handleIdChange}
+                                    placeholder="IDを入力（例: a1b2...）"
                                     className="w-full bg-white/5 border border-white/20 rounded-lg px-4 py-3 text-center text-white focus:outline-none focus:border-blue-400/50 transition-colors tracking-widest font-sans placeholder-gray-600"
                                     autoFocus
                                 />
+                                {searchResults.length > 0 && (
+                                    <div className="absolute top-full left-0 w-full bg-black/90 border border-white/20 rounded-lg mt-1 max-h-40 overflow-y-auto z-50 backdrop-blur-md">
+                                        {searchResults.map((result) => (
+                                            <button
+                                                key={result}
+                                                type="button"
+                                                onClick={() => {
+                                                    setVisitId(result);
+                                                    setSearchResults([]);
+                                                }}
+                                                className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-white/10 hover:text-white transition-colors flex items-center gap-2"
+                                            >
+                                                <span className="text-xs">🏛️</span>
+                                                <span className="font-mono">{result}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
 
                             <button

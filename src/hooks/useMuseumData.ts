@@ -16,6 +16,7 @@ export interface FrameData {
     title: string;
     description: string;
     imageUrl: string;
+    isRotated?: boolean;
 }
 
 export const useMuseumData = (museumId: string | undefined) => {

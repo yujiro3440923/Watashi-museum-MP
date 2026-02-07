@@ -11,7 +11,7 @@ import { PlayerSync } from '../../hooks/useMultiplayer';
 interface MuseumSceneProps {
     isEditMode: boolean;
     onFrameClick?: (id: string) => void;
-    framesData?: Record<string, { imageUrl: string; title?: string; description?: string }>;
+    framesData?: Record<string, { imageUrl: string; title?: string; description?: string; isRotated?: boolean }>;
     isInteractionDisabled?: boolean;
     otherPlayers?: { id: string; position: [number, number, number]; rotation: [number, number, number] }[];
     museumId?: string;
@@ -122,6 +122,7 @@ export const MuseumScene: FC<MuseumSceneProps> = ({ isEditMode, onFrameClick, fr
                             isEditMode={isEditMode}
                             onClick={onFrameClick}
                             imageUrl={framesData[frame.id]?.imageUrl}
+                            isRotated={framesData[frame.id]?.isRotated}
                         />
                     ))}
 

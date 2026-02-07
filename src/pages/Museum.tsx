@@ -47,7 +47,7 @@ export const Museum: React.FC = () => {
         setSelectedFrameId(null);
     };
 
-    const handleSaveEditor = async (data: { title: string; description: string; imageUrl: string; imageFile?: File }) => {
+    const handleSaveEditor = async (data: { title: string; description: string; imageUrl: string; isRotated?: boolean; imageFile?: File }) => {
         if (selectedFrameId) {
             console.log('Saving frame:', selectedFrameId, data);
             await saveFrame(selectedFrameId, data, data.imageFile);

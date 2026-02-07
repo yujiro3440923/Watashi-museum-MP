@@ -4,14 +4,15 @@ import type { Point, Area } from 'react-easy-crop';
 
 interface ImageEditorProps {
     onClose: () => void;
-    onSave: (data: { title: string; description: string; imageUrl: string; imageFile?: File }) => Promise<void> | void;
-    initialData?: { title: string; description: string; imageUrl: string };
+    onSave: (data: { title: string; description: string; imageUrl: string; isRotated?: boolean; imageFile?: File }) => Promise<void> | void;
+    initialData?: { title: string; description: string; imageUrl: string; isRotated?: boolean };
 }
 
 export const ImageEditor: React.FC<ImageEditorProps> = ({ onClose, onSave, initialData }) => {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [title, setTitle] = useState(initialData?.title || '');
     const [description, setDescription] = useState(initialData?.description || '');
+    const [isRotated, setIsRotated] = useState(initialData?.isRotated || false);
 
     // Image & Cropping State
     const [previewUrl, setPreviewUrl] = useState<string | null>(initialData?.imageUrl || null);
@@ -99,8 +100,6 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ onClose, onSave, initi
 
     const [isLoading, setIsLoading] = useState(false);
 
-    // ... (rest of state)
-
     const handleCropSave = async () => {
         if (originalFileUrl && croppedAreaPixels) {
             setIsLoading(true);
@@ -130,7 +129,7 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ onClose, onSave, initi
 
         setIsLoading(true);
         try {
-            console.log("保存処理を開始します...", { title, description, previewUrl });
+            console.log("保存処理を開始します...", { title, description, previewUrl, isRotated });
 
             let fileToUpload: File | undefined = undefined;
             if (previewUrl.startsWith('blob:')) {
@@ -145,7 +144,7 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ onClose, onSave, initi
             }
 
             console.log("onSaveを呼び出します...", { fileToUpload: !!fileToUpload });
-            await onSave({ title, description, imageUrl: previewUrl, imageFile: fileToUpload });
+            await onSave({ title, description, imageUrl: previewUrl, isRotated, imageFile: fileToUpload });
             console.log("保存完了");
             onClose(); // 保存成功時に確実に閉じる
         } catch (e) {
@@ -160,7 +159,7 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ onClose, onSave, initi
     return (
         <div className="absolute top-0 right-0 h-full w-full md:w-[400px] z-50 p-6 flex items-center">
             {/* Glassmorphism Panel */}
-            <div className="w-full h-auto bg-black/60 backdrop-blur-xl border border-white/10 rounded-3xl p-8 shadow-2xl text-white flex flex-col gap-6 animate-slideInRight relative">
+            <div className="w-full h-auto bg-black/60 backdrop-blur-xl border border-white/10 rounded-3xl p-8 shadow-2xl text-white flex flex-col gap-6 animate-slideInRight relative overflow-y-auto max-h-full">
 
                 {/* Header */}
                 <div className="flex justify-between items-center border-b border-white/10 pb-4">
@@ -229,14 +228,22 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ onClose, onSave, initi
                             className="group relative w-full aspect-video bg-white/5 border border-dashed border-white/20 rounded-xl overflow-hidden flex items-center justify-center cursor-pointer hover:bg-white/10 transition-colors"
                             onClick={() => fileInputRef.current?.click()}
                         >
-                            {previewUrl ? (
-                                <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
-                            ) : (
-                                <div className="text-center text-gray-400">
-                                    <span className="text-2xl block mb-2">📷</span>
-                                    <span className="text-xs tracking-wider">画像を選択</span>
-                                </div>
-                            )}
+                            {/* Rotation Container */}
+                            <div className={`w-full h-full flex items-center justify-center transition-all duration-300 ${isRotated ? 'p-8' : ''}`}>
+                                {previewUrl ? (
+                                    <img
+                                        src={previewUrl}
+                                        alt="Preview"
+                                        className={`object-cover shadow-2xl transition-all duration-300 ${isRotated ? 'w-[75%] aspect-[3/4]' : 'w-full h-full'}`}
+                                    />
+                                ) : (
+                                    <div className="text-center text-gray-400">
+                                        <span className="text-2xl block mb-2">📷</span>
+                                        <span className="text-xs tracking-wider">画像を選択</span>
+                                    </div>
+                                )}
+                            </div>
+
                             <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                                 <span className="text-xs text-white tracking-widest">画像を変更</span>
                             </div>
@@ -248,6 +255,20 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ onClose, onSave, initi
                             accept="image/*"
                             onChange={handleFileChange}
                         />
+
+                        {/* Orientation Toggle */}
+                        <div className="flex justify-center">
+                            <button
+                                onClick={() => setIsRotated(!isRotated)}
+                                className={`px-4 py-2 rounded-full border text-xs tracking-widest transition-all flex items-center gap-2 ${isRotated
+                                    ? 'bg-blue-600 border-blue-500 text-white'
+                                    : 'bg-transparent border-white/20 text-gray-400 hover:border-white/50 hover:text-white'
+                                    }`}
+                            >
+                                <span>{isRotated ? '縦向き (Portrait)' : '横向き (Landscape)'}</span>
+                                <span>🔄</span>
+                            </button>
+                        </div>
 
                         {/* Inputs */}
                         <div className="space-y-4">
@@ -266,7 +287,7 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ onClose, onSave, initi
                                 <textarea
                                     value={description}
                                     onChange={(e) => setDescription(e.target.value)}
-                                    className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 h-32 focus:outline-none focus:border-blue-400/50 transition-colors resize-none font-serif leading-relaxed"
+                                    className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 h-24 focus:outline-none focus:border-blue-400/50 transition-colors resize-none font-serif leading-relaxed"
                                     placeholder="この写真に込められた想いや記憶..."
                                 />
                             </div>
@@ -286,3 +307,4 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ onClose, onSave, initi
         </div>
     );
 };
+
