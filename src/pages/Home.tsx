@@ -185,7 +185,7 @@ export const Home: React.FC = () => {
                                     autoFocus
                                 />
                                 {searchResults.length > 0 && (
-                                    <div className="absolute top-full left-0 w-full bg-black/90 border border-white/20 rounded-lg mt-1 max-h-40 overflow-y-auto z-50 backdrop-blur-md">
+                                    <div className="absolute top-full left-0 w-full bg-white border border-gray-200 rounded-lg mt-1 max-h-60 overflow-y-auto z-50 shadow-xl text-left">
                                         {searchResults.map((result) => (
                                             <button
                                                 key={result}
@@ -193,12 +193,12 @@ export const Home: React.FC = () => {
                                                 onClick={() => {
                                                     navigate(`/museum/${result}`);
                                                 }}
-                                                className="w-full text-left px-4 py-3 text-sm text-gray-300 hover:bg-blue-900/40 hover:text-white transition-colors flex items-center gap-3 cursor-pointer group border-b border-white/5 last:border-0"
+                                                className="w-full text-left px-4 py-3 text-gray-700 hover:bg-gray-100 transition-colors flex items-center gap-3 cursor-pointer group border-b border-gray-100 last:border-0"
                                             >
-                                                <span className="text-xs group-hover:text-blue-400 transition-colors mt-0.5">➜</span>
+                                                <span className="text-gray-400 group-hover:text-gray-600">🔍</span>
                                                 <div className="flex flex-col overflow-hidden">
-                                                    <span className="font-mono text-sm text-white">{result}</span>
-                                                    <span className="text-[10px] text-gray-500 font-sans truncate group-hover:text-blue-300 transition-colors">
+                                                    <span className="font-sans text-sm font-medium text-gray-900">{result}</span>
+                                                    <span className="text-xs text-blue-600 truncate underline decoration-blue-600/30">
                                                         {window.location.origin}/museum/{result}
                                                     </span>
                                                 </div>
