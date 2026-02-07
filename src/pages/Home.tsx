@@ -5,13 +5,15 @@ import { useAuth } from '../hooks/useAuth';
 import { db } from '../lib/firebase';
 import { collection, query, orderBy, startAt, endAt, limit, getDocs } from 'firebase/firestore';
 
+// Page Sections
+import { HeroSection } from '../components/Home/HeroSection';
+import { ConceptSection } from '../components/Home/ConceptSection';
+import { HowToSection } from '../components/Home/HowToSection';
+import { FooterSection } from '../components/Home/FooterSection';
+
 export const Home: React.FC = () => {
     const navigate = useNavigate();
     const { user, login } = useAuth();
-
-    // Googleログインボタンのコンポーネントを直接埋め込むのではなく、
-    // useAuthのlogin関数を使ってデザインを統一する
-
     const [showVisitModal, setShowVisitModal] = useState(false);
     const [visitId, setVisitId] = useState('');
     const [searchResults, setSearchResults] = useState<string[]>([]);
@@ -25,13 +27,12 @@ export const Home: React.FC = () => {
             return;
         }
 
-        // Check for default API key but allow execution (might fail if not configured)
+        // Check for default API key
         if (db.app.options.apiKey === "API_KEY") {
-            console.warn("Using default API_KEY. Search might fail if Firebase is not configured.");
+            console.warn("Using default API_KEY. Search might fail.");
         }
 
         try {
-            // Search museums by ID (document ID)
             const museumsRef = collection(db, 'museums');
             const q = query(
                 museumsRef,
@@ -59,33 +60,23 @@ export const Home: React.FC = () => {
         } else {
             try {
                 await login();
-                // login関数内でリダイレクトしない場合、ここで監視が必要だが
-                // onAuthStateChangedが発火して再レンダリングされ、
-                // 次のクリックで遷移できる。
-                // UX向上のため、ログイン成功時のリダイレクトはuseEffectで行うか、
-                // ここでawait後に遷移する（ただしloginがPromiseを返す前提）
             } catch (error) {
-                // エラーハンドリング
+                // Error handled by Auth provider usually
             }
         }
     };
-
-    // ユーザーがログインしたら自動的に自分のミュージアムへ飛ばすロジックは
-    // ここでは入れない（ユーザーが選べるようにする）
 
     const handleVisitSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         const inputId = visitId.trim();
         if (!inputId) return;
 
-        // If default API key, just try to navigate directly (search won't work)
         if (db.app.options.apiKey === "API_KEY") {
             navigate(`/museum/${inputId}`);
             return;
         }
 
         try {
-            // If ID is short or partial, try to find the full ID first
             const museumsRef = collection(db, 'museums');
             const q = query(
                 museumsRef,
@@ -97,12 +88,10 @@ export const Home: React.FC = () => {
             const snapshot = await getDocs(q);
 
             if (!snapshot.empty) {
-                // Found a matching museum ID
                 const fullId = snapshot.docs[0].id;
                 console.log(`Redirecting from partial ID ${inputId} to full ID ${fullId}`);
                 navigate(`/museum/${fullId}`);
             } else {
-                // No match found, try navigating to input ID anyway
                 navigate(`/museum/${inputId}`);
             }
         } catch (error) {
@@ -112,82 +101,25 @@ export const Home: React.FC = () => {
     };
 
     return (
-        <div className="w-full h-screen bg-black text-white flex flex-col items-center justify-center overflow-hidden font-serif relative">
-            {/* Background Effects */}
-            <div className="absolute inset-0 z-0 opacity-30 pointer-events-none">
-                <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-blue-900 rounded-full blur-[120px] animate-pulse" />
-                <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-purple-900 rounded-full blur-[120px] animate-pulse delay-1000" />
-            </div>
+        <div className="w-full min-h-screen bg-black text-white font-serif overflow-x-hidden">
+            {/* 1. Hero Section (Top View) */}
+            <HeroSection
+                user={user}
+                handleEnterMyMuseum={handleEnterMyMuseum}
+                handleEnterDemo={handleEnterDemo}
+                setShowVisitModal={setShowVisitModal}
+            />
 
-            <div className="z-10 text-center space-y-12 max-w-4xl px-8 w-full">
-                {/* Title Section */}
-                <div className="space-y-4 animate-fadeIn">
-                    <p className="text-sm tracking-[0.3em] text-gray-400 uppercase">Archive of Silence and Memory</p>
-                    <h1 className="text-6xl md:text-8xl font-thin tracking-widest leading-tight">
-                        私だけの<br />
-                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-200 to-purple-200">
-                            美術館
-                        </span>
-                    </h1>
-                    <p className="mt-8 text-lg md:text-xl text-gray-300 font-light leading-relaxed tracking-wide">
-                        言葉にならない記憶を、静寂の中に飾る。<br />
-                        誰にも邪魔されない、あなただけの空間。
-                    </p>
-                </div>
+            {/* 2. Concept Section (About) */}
+            <ConceptSection />
 
-                {/* Action Buttons */}
-                <div className="flex flex-col md:flex-row gap-6 justify-center items-center mt-12 animate-fadeIn" style={{ animationDelay: '0.3s' }}>
+            {/* 3. Usage Guide (How it works) */}
+            <HowToSection />
 
-                    {/* Login / My Museum Button */}
-                    <button
-                        onClick={handleEnterMyMuseum}
-                        className="group relative px-8 py-4 bg-gradient-to-r from-blue-900/30 to-purple-900/30 border border-white/20 backdrop-blur-sm transition-all duration-500 hover:bg-white/10 hover:border-white/50 w-full md:w-auto min-w-[280px] rounded-lg overflow-hidden"
-                    >
-                        <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 to-purple-600/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                        <span className="relative flex flex-col items-center z-10">
-                            <span className="text-xl font-medium tracking-widest text-white">
-                                {user ? '私の美術館へ' : 'Googleでログイン'}
-                            </span>
-                            <span className="text-xs text-blue-200 mt-2 font-sans tracking-wide">
-                                {user ? '保存された空間を開く' : 'いつまでも残る、あなただけの展示室'}
-                            </span>
-                        </span>
-                    </button>
+            {/* 4. Footer (Action) */}
+            <FooterSection handleEnterMyMuseum={handleEnterMyMuseum} />
 
-                    {/* Demo Museum */}
-                    <button
-                        onClick={handleEnterDemo}
-                        className="group relative px-8 py-4 bg-transparent border border-white/10 transition-all duration-300 hover:border-white/30 w-full md:w-auto min-w-[280px] rounded-lg"
-                    >
-                        <span className="flex flex-col items-center">
-                            <span className="text-lg font-light tracking-widest text-gray-300 group-hover:text-white transition-colors">
-                                体験入館
-                            </span>
-                            <span className="text-xs text-gray-500 mt-2 font-sans tracking-wide group-hover:text-gray-400 transition-colors">
-                                登録なしですぐに試す
-                            </span>
-                        </span>
-                    </button>
-
-                    {/* Visit Other Museum */}
-                    <button
-                        onClick={() => setShowVisitModal(true)}
-                        className="group relative px-8 py-4 bg-transparent border border-white/10 transition-all duration-300 hover:border-white/30 w-full md:w-auto min-w-[280px] rounded-lg"
-                    >
-                        <span className="flex flex-col items-center">
-                            <span className="text-lg font-light tracking-widest text-gray-300 group-hover:text-white transition-colors">
-                                誰かの美術館へ
-                            </span>
-                            <span className="text-xs text-gray-500 mt-2 font-sans tracking-wide group-hover:text-gray-400 transition-colors">
-                                IDを入力して入館
-                            </span>
-                        </span>
-                    </button>
-
-                </div>
-            </div>
-
-            {/* Visit Modal */}
+            {/* Visit Modal (Overlay) */}
             {showVisitModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fadeIn">
                     <div className="relative w-full max-w-md p-8 bg-black/80 border border-white/10 rounded-2xl shadow-2xl animate-scaleIn mx-4">
@@ -250,13 +182,6 @@ export const Home: React.FC = () => {
                     </div>
                 </div>
             )}
-
-            {/* Footer */}
-            <footer className="absolute bottom-8 text-center w-full z-10 pointer-events-none">
-                <p className="text-xs text-gray-600 tracking-widest font-sans">
-                    © 2026 WATASHI MUSEUM. All Rights Reserved.
-                </p>
-            </footer>
         </div>
     );
 };
