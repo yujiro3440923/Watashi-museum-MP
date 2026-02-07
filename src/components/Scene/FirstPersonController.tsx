@@ -135,7 +135,7 @@ export const FirstPersonController: FC<{
         }
 
         const frontVector = new Vector3(0, 0, kbForward + mobForward);
-        const sideVector = new Vector3(kbSide + mobSide, 0, 0);
+        const sideVector = new Vector3(kbSide - mobSide, 0, 0);
 
         direction
             .subVectors(frontVector, sideVector)
